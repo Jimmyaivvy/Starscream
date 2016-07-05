@@ -230,6 +230,10 @@ public class WebSocket : NSObject, NSStreamDelegate {
         }
         
         dequeueWrite(data, code: self.continousFrameType!, isFin: isFin, writeCompletion: completion)
+        
+        if isFin == true {
+            self.continousFrameType = nil
+        }
     }
     
     //write a   ping   to the websocket. This sends it as a  control frame.
