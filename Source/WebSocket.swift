@@ -777,7 +777,7 @@ public class WebSocket : NSObject, NSStreamDelegate {
         dequeueWrite(NSData(bytes: buffer, length: sizeof(UInt16)), code: .ConnectionClose)
     }
     ///used to write things to the stream
-    private func dequeueWrite(data: NSData, code: OpCode, isFin: Bool = false, writeCompletion: (() -> ())? = nil) {
+    private func dequeueWrite(data: NSData, code: OpCode, isFin: Bool = true, writeCompletion: (() -> ())? = nil) {
         writeQueue.addOperationWithBlock { [weak self] in
             //stream isn't ready, let's wait
             guard let s = self else { return }
