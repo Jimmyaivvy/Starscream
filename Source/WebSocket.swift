@@ -144,6 +144,8 @@ public class WebSocket : NSObject, NSStreamDelegate {
     //the shared processing queue used for all websocket
     private static let sharedWorkQueue = dispatch_queue_create("com.vluxe.starscream.websocket", DISPATCH_QUEUE_SERIAL)
     
+    private var continousFrameType: OpCode? = nil
+    
     //used for setting protocols.
     public init(url: NSURL, protocols: [String]? = nil) {
         self.url = url
@@ -210,6 +212,24 @@ public class WebSocket : NSObject, NSStreamDelegate {
     public func writeData(data: NSData, completion: (() -> ())? = nil) {
         guard isConnected else { return }
         dequeueWrite(data, code: .BinaryFrame, writeCompletion: completion)
+    }
+    
+    // Write continous binary - frame
+    public func writeContinousFrame(data: NSData, isFin: Bool, completion: (() -> ())? = nil ) {
+        
+        guard isConnected else {
+            completion?()
+            return
+        }
+        
+        if self.continousFrameType != nil {
+            self.continousFrameType = OpCode.ContinueFrame
+        }
+        else {
+            self.continousFrameType = OpCode.BinaryFrame
+        }
+        
+        dequeueWrite(data, code: self.continousFrameType!, isFin: isFin, writeCompletion: completion)
     }
     
     //write a   ping   to the websocket. This sends it as a  control frame.
@@ -753,7 +773,7 @@ public class WebSocket : NSObject, NSStreamDelegate {
         dequeueWrite(NSData(bytes: buffer, length: sizeof(UInt16)), code: .ConnectionClose)
     }
     ///used to write things to the stream
-    private func dequeueWrite(data: NSData, code: OpCode, writeCompletion: (() -> ())? = nil) {
+    private func dequeueWrite(data: NSData, code: OpCode, isFin: Bool = false, writeCompletion: (() -> ())? = nil) {
         writeQueue.addOperationWithBlock { [weak self] in
             //stream isn't ready, let's wait
             guard let s = self else { return }
@@ -762,7 +782,14 @@ public class WebSocket : NSObject, NSStreamDelegate {
             let dataLength = data.length
             let frame = NSMutableData(capacity: dataLength + s.MaxFrameSize)
             let buffer = UnsafeMutablePointer<UInt8>(frame!.mutableBytes)
-            buffer[0] = s.FinMask | code.rawValue
+            
+            if isFin {
+                buffer[0] = s.FinMask | code.rawValue
+            }
+            else {
+                buffer[0] = code.rawValue
+            }
+            
             if dataLength < 126 {
                 buffer[1] = CUnsignedChar(dataLength)
             } else if dataLength <= Int(UInt16.max) {
