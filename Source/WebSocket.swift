@@ -222,7 +222,7 @@ public class WebSocket : NSObject, NSStreamDelegate {
             return
         }
         
-        if self.continousFrameType != nil {
+        if self.continousFrameType != nil && isFin == false {
             self.continousFrameType = OpCode.ContinueFrame
         }
         else {
