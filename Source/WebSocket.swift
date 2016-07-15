@@ -145,6 +145,7 @@ public class WebSocket : NSObject, NSStreamDelegate {
     private static let sharedWorkQueue = dispatch_queue_create("com.vluxe.starscream.websocket", DISPATCH_QUEUE_SERIAL)
     
     private var continousFrameType: OpCode? = nil
+    private var continousTextFrameType: OpCode? = nil
     
     //used for setting protocols.
     public init(url: NSURL, protocols: [String]? = nil) {
@@ -214,6 +215,28 @@ public class WebSocket : NSObject, NSStreamDelegate {
         dequeueWrite(data, code: .BinaryFrame, writeCompletion: completion)
     }
     
+    // Write continous text - frame
+    public func writeContinousTextFrame(data: NSData, isFin: Bool, completion: (() -> ())? = nil ) {
+        
+        guard isConnected else {
+            completion?()
+            return
+        }
+        
+        if self.continousTextFrameType != nil {
+            self.continousTextFrameType = OpCode.ContinueFrame
+        }
+        else {
+            self.continousTextFrameType = OpCode.TextFrame
+        }
+        
+        dequeueWrite(data, code: self.continousTextFrameType!, isFin: isFin, writeCompletion: completion)
+        
+        if isFin == true {
+            self.continousTextFrameType = nil
+        }
+    }
+    
     // Write continous binary - frame
     public func writeContinousFrame(data: NSData, isFin: Bool, completion: (() -> ())? = nil ) {
         
@@ -222,7 +245,7 @@ public class WebSocket : NSObject, NSStreamDelegate {
             return
         }
         
-        if self.continousFrameType != nil && isFin == false {
+        if self.continousFrameType != nil {
             self.continousFrameType = OpCode.ContinueFrame
         }
         else {
